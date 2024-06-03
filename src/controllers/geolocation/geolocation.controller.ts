@@ -1,5 +1,11 @@
 import { MailerService } from '@nestjs-modules/mailer';
-import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  InternalServerErrorException,
+  Post,
+} from '@nestjs/common';
 import { SearchDto } from 'src/DTO/search.dto';
 import { TomTomApiService } from 'src/integrations/tomtom-api.service';
 import { GeolocationService } from 'src/services/geolocation/geolocation.service';
@@ -31,11 +37,12 @@ export class GeolocationController {
       }
     }
     if (searchDto.sendResultViaMail && searchDto.email && result) {
-      await this.mailService.sendMail({
-        from: 'solzed@mail.ru',
-        to: searchDto.email,
-        subject: 'Geolocation Search Result',
-        html: `<table>
+      try {
+        await this.mailService.sendMail({
+          from: 'solzed@mail.ru',
+          to: searchDto.email,
+          subject: 'Geolocation Search Result',
+          html: `<table>
                  <thead>
                  <tr>
                  <th>Location</th>
@@ -50,8 +57,17 @@ export class GeolocationController {
                  <td>${result.lat}</td>
                  </tr>
                  </table>`,
-      });
+        });
+      } catch (error) {
+        throw new InternalServerErrorException({
+          statusCode: 500,
+          error: 'Internal Server Error',
+          message: 'Mail service error',
+          deails: error.message,
+        });
+      }
     }
+
     return result;
   }
 }
